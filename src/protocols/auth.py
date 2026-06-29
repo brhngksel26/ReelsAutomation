@@ -1,0 +1,103 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Protocol
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.core.permission import Permission
+
+if TYPE_CHECKING:
+    from src.models.auth import AuthPermission, Profile, User
+
+
+class UserRepository(Protocol):
+    async def create(self, db: AsyncSession, data: dict) -> User: ...
+
+    async def get(self, db: AsyncSession, **filters: Any) -> User | None: ...
+
+    async def get_by_id(self, db: AsyncSession, id: int) -> User | None: ...
+
+    async def get_many(
+        self, db: AsyncSession, skip: int = 0, limit: int = 100, **filters: Any
+    ) -> list[User]: ...
+
+    async def update(self, db: AsyncSession, id: int, data: dict) -> User | None: ...
+
+    async def delete(self, db: AsyncSession, id: int) -> bool: ...
+
+    async def hard_delete(self, db: AsyncSession, id: int) -> bool: ...
+
+    async def count(self, db: AsyncSession, **filters: Any) -> int: ...
+
+    async def get_by_email(self, db: AsyncSession, email: str) -> User | None: ...
+
+    async def get_by_email_with_permissions(
+        self,
+        db: AsyncSession,
+        email: str,
+    ) -> User | None: ...
+
+    async def assign_permissions(
+        self,
+        db: AsyncSession,
+        user_id: int,
+        permission_ids: list[int],
+    ) -> None: ...
+
+
+class ProfileRepository(Protocol):
+    async def create(self, db: AsyncSession, data: dict) -> Profile: ...
+
+    async def get(self, db: AsyncSession, **filters: Any) -> Profile | None: ...
+
+    async def get_by_id(self, db: AsyncSession, id: int) -> Profile | None: ...
+
+    async def get_many(
+        self, db: AsyncSession, skip: int = 0, limit: int = 100, **filters: Any
+    ) -> list[Profile]: ...
+
+    async def update(self, db: AsyncSession, id: int, data: dict) -> Profile | None: ...
+
+    async def delete(self, db: AsyncSession, id: int) -> bool: ...
+
+    async def hard_delete(self, db: AsyncSession, id: int) -> bool: ...
+
+    async def count(self, db: AsyncSession, **filters: Any) -> int: ...
+
+    async def get_by_user_id(
+        self, db: AsyncSession, user_id: int
+    ) -> Profile | None: ...
+
+
+class AuthPermissionRepository(Protocol):
+    async def create(self, db: AsyncSession, data: dict) -> AuthPermission: ...
+
+    async def get(self, db: AsyncSession, **filters: Any) -> AuthPermission | None: ...
+
+    async def get_by_id(self, db: AsyncSession, id: int) -> AuthPermission | None: ...
+
+    async def get_many(
+        self, db: AsyncSession, skip: int = 0, limit: int = 100, **filters: Any
+    ) -> list[AuthPermission]: ...
+
+    async def update(
+        self, db: AsyncSession, id: int, data: dict
+    ) -> AuthPermission | None: ...
+
+    async def delete(self, db: AsyncSession, id: int) -> bool: ...
+
+    async def hard_delete(self, db: AsyncSession, id: int) -> bool: ...
+
+    async def count(self, db: AsyncSession, **filters: Any) -> int: ...
+
+    async def get_by_permission(
+        self,
+        db: AsyncSession,
+        permission: Permission,
+    ) -> AuthPermission | None: ...
+
+    async def get_default_permissions(
+        self, db: AsyncSession
+    ) -> list[AuthPermission]: ...
+
+    async def get_all_permissions(self, db: AsyncSession) -> list[AuthPermission]: ...
