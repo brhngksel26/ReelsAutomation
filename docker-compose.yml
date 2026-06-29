@@ -1,0 +1,133 @@
+services:
+  reels_automation_web:
+    image: reels-automation:latest
+    build: .
+    container_name: reels_automation
+    working_dir: /src
+    command: sh scripts/start.sh
+    restart: unless-stopped
+    ports:
+      - "${WEB_CONTAINER_PORT:-8000}:8000"
+    depends_on:
+      - reels_automation_database
+      - reels_automation_redis
+    env_file:
+      - .env
+    volumes:
+      - ./src:/src/src
+      - ./alembic.ini:/src/alembic.ini
+      - ./alembic:/src/alembic
+      - ./scripts:/src/scripts
+      - ./storage:/storage
+    networks:
+      - reels_automation
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json')",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+
+  reels_automation_database:
+    image: postgres:17.2-alpine
+    container_name: reels_automation_database
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - ${POSTGRES_CONTAINER_PORT}:5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    networks:
+      - reels_automation
+    command:
+      - postgres
+      - -c
+      - log_min_duration_statement=500
+      - -c
+      - log_statement=none
+      - -c
+      - shared_buffers=1GB
+      - -c
+      - effective_cache_size=3GB
+      - -c
+      - work_mem=16MB
+      - -c
+      - max_connections=200
+
+  reels_automation_redis:
+    image: redis
+    container_name: reels_automation_redis
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+    restart: always
+    ports:
+      - "${REDIS_CONTAINER_PORT}:6379"
+    networks:
+      - reels_automation
+
+  reels_automation_celery_worker:
+    image: reels-automation:latest
+    build: .
+    container_name: reels_automation_celery_worker
+    working_dir: /src
+    command: celery -A src.core.celery_app worker -Q celery,pipeline -c 4 -P threads --loglevel=info
+    volumes:
+      - ./src:/src/src
+      - ./storage:/storage
+    depends_on:
+      - reels_automation_database
+      - reels_automation_redis
+    env_file:
+      - .env
+    networks:
+      - reels_automation
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "celery", "-A", "src.core.celery_app", "status"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+  reels_automation_celery_beat:
+    image: reels-automation:latest
+    build: .
+    container_name: reels_automation_celery_beat
+    working_dir: /src
+    user: root
+    command: celery -A src.core.celery_app beat --loglevel=info
+    volumes:
+      - ./src:/src/src
+      - celery_beat_data:/var/lib/celerybeat
+    environment:
+      CELERY_BEAT_SCHEDULE_FILENAME: /var/lib/celerybeat/celerybeat-schedule
+    depends_on:
+      - reels_automation_database
+      - reels_automation_redis
+      - reels_automation_celery_worker
+    env_file:
+      - .env
+    networks:
+      - reels_automation
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "ps aux | grep -q '[c]elery.*beat'"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+
+networks:
+  reels_automation:
+
+volumes:
+  postgres_data:
+  celery_beat_data:
