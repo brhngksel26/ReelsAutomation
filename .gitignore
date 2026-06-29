@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Generated media (keep directory structure)
+/storage/videos/*
+!storage/videos/.gitkeep
+/storage/audio/*
+!storage/audio/.gitkeep

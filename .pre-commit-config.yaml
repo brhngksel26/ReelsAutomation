@@ -1,0 +1,28 @@
+repos:
+  - repo: local
+    hooks:
+      - id: autoflake
+        name: autoflake
+        entry: autoflake
+        language: python
+        types: [python]
+        args: [--remove-all-unused-imports, -i]
+        stages: [pre-commit]
+        exclude: ^alembic/.*
+
+      - id: isort
+        name: isort
+        entry: isort
+        language: python
+        types: [python]
+        args: ["--profile", "black", "--filter-files"]
+        stages: [pre-commit]
+        exclude: ^alembic/.*
+
+      - id: black
+        name: black
+        entry: black
+        language: python
+        types: [python]
+        stages: [pre-commit]
+        exclude: ^alembic/.*
